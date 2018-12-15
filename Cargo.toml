@@ -1,0 +1,16 @@
+[package]
+name = "tower-dns"
+version = "0.1.0"
+authors = ["Lucio Franco <luciofranco14@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+tower-service = { git = "https://github.com/tower-rs/tower"}
+trust-dns-resolver = { version = "0.10", optional = true }
+futures = "0.1"
+
+[features]
+trust-dns = ["trust-dns-resolver"]
+
+[dev-dependencies]
+tokio = "0.1"
