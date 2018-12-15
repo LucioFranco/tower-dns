@@ -21,8 +21,7 @@ impl<A, R: Resolve<A>> Service<A> for Resolver<R>
     type Future = Box<Future<Item = Self::Response, Error = Self::Error> + Send + 'static>;
 
     fn call(&mut self, target: A) -> Self::Future {
-        let fut = self.0.lookup_ip(target);
-        Box::new(fut)
+        Box::new(self.0.lookup(target))
     }
 
     fn poll_ready(&mut self) -> Poll<(), Self::Error> {
@@ -36,7 +35,7 @@ pub trait Resolve<Target> {
     type Error: 'static;
     type Future: Future<Item = IpAddr, Error = Self::Error> + Send + 'static;
 
-    fn lookup_ip(&mut self, target: Target) -> Self::Future;
+    fn lookup(&mut self, target: Target) -> Self::Future;
 }
 
 #[cfg(feature = "trust-dns")]
@@ -62,7 +61,7 @@ mod trust_dns {
         type Error = ResolveError;
         type Future = Box<Future<Item = IpAddr, Error = Self::Error> + Send + 'static>;
 
-        fn lookup_ip(&mut self, target: Self::Target) -> Self::Future {
+        fn lookup(&mut self, target: Self::Target) -> Self::Future {
             let fut = self.0.lookup_ip(target)
                 .and_then(|ip| Ok(ip.iter().next().unwrap()));
             
