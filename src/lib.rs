@@ -1,7 +1,11 @@
+//! Tower middleware to resolve DNS requests and produce and `IpAddr`
+
 use futures::{Async, Future, Poll};
 use std::net::IpAddr;
 use tower_service::Service;
 
+/// A `Service` that resolves `IpAddr`
+/// based on some type that implements `Resolve`.
 pub struct Resolver<R>(R);
 
 impl<R> Resolver<R> {
@@ -10,13 +14,13 @@ impl<R> Resolver<R> {
     }
 }
 
-impl<R: Resolve> Service<R::Target> for Resolver<R>
+impl<A, R: Resolve<A>> Service<A> for Resolver<R>
 {
     type Response = IpAddr;
     type Error = R::Error;
     type Future = Box<Future<Item = Self::Response, Error = Self::Error> + Send + 'static>;
 
-    fn call(&mut self, target: R::Target) -> Self::Future {
+    fn call(&mut self, target: A) -> Self::Future {
         let fut = self.0.lookup_ip(target);
         Box::new(fut)
     }
@@ -26,12 +30,13 @@ impl<R: Resolve> Service<R::Target> for Resolver<R>
     }
 }
 
-pub trait Resolve {
-    type Target;
+/// Represents a type that can resolve an `IpAddr` from some
+/// type `Target`.
+pub trait Resolve<Target> {
     type Error: 'static;
     type Future: Future<Item = IpAddr, Error = Self::Error> + Send + 'static;
 
-    fn lookup_ip(&mut self, target: Self::Target) -> Self::Future;
+    fn lookup_ip(&mut self, target: Target) -> Self::Future;
 }
 
 #[cfg(feature = "trust-dns")]
@@ -53,8 +58,7 @@ mod trust_dns {
         }
     }
 
-    impl<A: IntoName + TryParseIp> Resolve for TrustDns<A> {
-        type Target = A;
+    impl<A: IntoName + TryParseIp> Resolve<A> for TrustDns<A> {
         type Error = ResolveError;
         type Future = Box<Future<Item = IpAddr, Error = Self::Error> + Send + 'static>;
 
